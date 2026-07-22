@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced AI Medical Intelligence Platform | Diagnostic Studio & XAI Report System</title>
+    <meta name="description" content="Next-Generation Medical Intelligence Platform powered by PyTorch Deep Learning, Grad-CAM Explainable AI, and LLM Radiology Report Synthesis.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="dark-theme">
+
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo-brand">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-microscope"></i>
+                </div>
+                <div class="logo-text">
+                    <span class="brand-title">MED-INTELLIGENCE <span class="badge-ai">AI 2.0</span></span>
+                    <span class="brand-subtitle">Advanced Clinical Diagnostic & XAI Platform</span>
+                </div>
+            </div>
+
+            <nav class="nav-links">
+                <button class="nav-btn active" data-target="studio-tab">
+                    <i class="fa-solid fa-laptop-medical"></i> Diagnostic Studio
+                </button>
+                <button class="nav-btn" data-target="history-tab" id="btn-nav-history">
+                    <i class="fa-solid fa-folder-open"></i> Patient Records
+                </button>
+                <button class="nav-btn" data-target="analytics-tab" id="btn-nav-analytics">
+                    <i class="fa-solid fa-chart-line"></i> Platform Analytics
+                </button>
+                <a href="/docs" target="_blank" class="nav-btn nav-link-api">
+                    <i class="fa-solid fa-code"></i> OpenAPI Docs
+                </a>
+            </nav>
+
+            <div class="header-actions">
+                <a href="/api/v1/project-report" target="_blank" class="btn-report-download">
+                    <i class="fa-solid fa-file-pdf"></i> Technical PDF Report
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-container">
+
+        <!-- TAB 1: DIAGNOSTIC STUDIO -->
+        <section id="studio-tab" class="tab-content active">
+            
+            <div class="studio-grid">
+                
+                <!-- Left Panel: Upload & Patient Information -->
+                <div class="card glass-panel upload-panel">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-cloud-arrow-up"></i> Image Acquisition & Metadata</h2>
+                        <p>Upload Chest Radiograph (PNG, JPG, DICOM)</p>
+                    </div>
+
+                    <form id="diagnostic-form" class="diagnostic-form">
+                        
+                        <!-- Drag & Drop Zone -->
+                        <div class="drop-zone" id="drop-zone">
+                            <input type="file" id="image-input" accept="image/*" class="file-input-hidden" required>
+                            <div class="drop-zone-content" id="drop-zone-prompt">
+                                <div class="upload-icon-wrapper">
+                                    <i class="fa-solid fa-x-ray"></i>
+                                </div>
+                                <p class="drop-text-primary">Drag & drop Chest X-Ray image here</p>
+                                <p class="drop-text-secondary">or click to browse files from system</p>
+                                <span class="supported-formats">Supported: PNG, JPG, JPEG, DICOM</span>
+                            </div>
+                            
+                            <!-- Image Preview Container -->
+                            <div class="image-preview-container hidden" id="preview-wrapper">
+                                <img id="image-preview" src="" alt="X-Ray Preview">
+                                <button type="button" class="btn-remove-image" id="btn-remove-image" title="Remove image">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Sample Preset Selector -->
+                        <div class="sample-presets-wrapper">
+                            <span class="sample-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Try Sample Cases:</span>
+                            <div class="sample-buttons">
+                                <button type="button" class="btn-sample" data-sample="normal">Normal X-Ray</button>
+                                <button type="button" class="btn-sample" data-sample="pneumonia">Pneumonia Case</button>
+                                <button type="button" class="btn-sample" data-sample="covid">COVID-19 Case</button>
+                            </div>
+                        </div>
+
+                        <!-- Patient Metadata Inputs -->
+                        <div class="metadata-grid">
+                            <div class="form-group">
+                                <label for="patient-id"><i class="fa-solid fa-id-card"></i> Patient ID</label>
+                                <input type="text" id="patient-id" value="P-MED-8492" placeholder="e.g. P-1001">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="patient-name"><i class="fa-solid fa-user"></i> Full Name</label>
+                                <input type="text" id="patient-name" value="Eleanor Vance" placeholder="Patient Name">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="patient-age"><i class="fa-solid fa-cake-candles"></i> Age</label>
+                                <input type="number" id="patient-age" value="52" min="1" max="120">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="patient-gender"><i class="fa-solid fa-venus-mars"></i> Gender</label>
+                                <select id="patient-gender">
+                                    <option value="Female">Female</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary-action" id="btn-run-diagnosis">
+                            <i class="fa-solid fa-brain"></i> Execute Deep Learning & Grad-CAM Analysis
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right Panel: Results & Explainable AI Studio -->
+                <div class="card glass-panel results-panel">
+                    
+                    <!-- Empty State -->
+                    <div id="results-empty-state" class="empty-state">
+                        <div class="empty-icon-glow">
+                            <i class="fa-solid fa-laptop-medical"></i>
+                        </div>
+                        <h3>Diagnostic Results Workspace</h3>
+                        <p>Upload a Chest X-Ray or select a sample case to view PyTorch model diagnosis, Grad-CAM feature attribution heatmaps, and LLM radiological reports.</p>
+                    </div>
+
+                    <!-- Loader State -->
+                    <div id="results-loader" class="loader-state hidden">
+                        <div class="spinner-ai">
+                            <div class="spinner-ring"></div>
+                            <i class="fa-solid fa-dna spinner-icon"></i>
+                        </div>
+                        <h3 class="loader-title">Analyzing Medical Image...</h3>
+                        <p class="loader-subtitle">Evaluating DenseNet121 features, calculating Grad-CAM gradients & synthesizing LLM report</p>
+                    </div>
+
+                    <!-- Results Dashboard (Populated dynamically) -->
+                    <div id="results-content" class="results-content hidden">
+                        
+                        <!-- Prediction Banner Header -->
+                        <div class="diagnosis-banner" id="diag-banner">
+                            <div class="diag-header-left">
+                                <span class="diag-label">Primary Diagnostic Finding</span>
+                                <h2 class="diag-class-title" id="res-predicted-class">Pneumonia</h2>
+                                <div class="diag-tags">
+                                    <span class="badge-risk" id="res-risk-level">High Risk</span>
+                                    <span class="badge-conf" id="res-confidence">Confidence: 94.8%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="diag-header-right">
+                                <a href="#" id="res-pdf-link" target="_blank" class="btn-download-scan-pdf">
+                                    <i class="fa-solid fa-file-arrow-down"></i> Download Clinical PDF
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Class Probability Distribution Bar -->
+                        <div class="prob-distribution-card">
+                            <span class="section-subtitle"><i class="fa-solid fa-chart-bar"></i> Multi-Class Probability Breakdown</span>
+                            <div class="prob-bars-grid" id="prob-bars-container">
+                                <!-- Bars populated via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Interactive Explainable AI (Grad-CAM) Visual Studio -->
+                        <div class="xai-visual-studio">
+                            <div class="xai-header">
+                                <h3><i class="fa-solid fa-eye"></i> Explainable AI (Grad-CAM) Feature Attribution</h3>
+                                <div class="opacity-control">
+                                    <label for="heatmap-opacity"><i class="fa-solid fa-sliders"></i> Heatmap Overlay Opacity:</label>
+                                    <input type="range" id="heatmap-opacity" min="0" max="1" step="0.05" value="0.5">
+                                    <span id="opacity-val">50%</span>
+                                </div>
+                            </div>
+
+                            <!-- Side-by-side & Interactive Fused Image Canvas -->
+                            <div class="xai-image-viewport">
+                                <div class="xai-image-card">
+                                    <div class="img-badge">Original Radiograph</div>
+                                    <img id="res-orig-img" src="" alt="Original X-Ray">
+                                </div>
+
+                                <div class="xai-image-card relative-blend-container">
+                                    <div class="img-badge">Grad-CAM Fused Heatmap</div>
+                                    <img id="res-base-img" src="" alt="Base X-Ray">
+                                    <img id="res-overlay-img" src="" class="overlay-blend" alt="Grad-CAM Overlay">
+                                </div>
+                            </div>
+
+                            <!-- Spatial Feature Metrics -->
+                            <div class="spatial-metrics-bar" id="spatial-metrics-bar">
+                                <div class="metric-chip">
+                                    <span class="m-label">Affected Region Coverage</span>
+                                    <span class="m-val" id="metric-coverage">18.4%</span>
+                                </div>
+                                <div class="metric-chip">
+                                    <span class="m-label">Peak Activation Location</span>
+                                    <span class="m-val" id="metric-location">(0.42, 0.58)</span>
+                                </div>
+                                <div class="metric-chip">
+                                    <span class="m-label">Severity Index</span>
+                                    <span class="m-val" id="metric-severity">0.76</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LLM Clinical Radiology Report Card -->
+                        <div class="llm-report-card">
+                            <div class="report-card-header">
+                                <h3><i class="fa-solid fa-file-medical"></i> LLM Radiology Report Synthesis</h3>
+                                <span class="badge-source" id="res-report-source">Gemini 1.5 Flash</span>
+                            </div>
+                            
+                            <div class="report-content-body">
+                                <pre id="res-report-text" class="report-text-pre"></pre>
+                            </div>
+
+                            <div class="report-disclaimer">
+                                <i class="fa-solid fa-shield-halved"></i> 
+                                <span id="res-disclaimer">AI-generated decision support report. Requires verification by a board-certified Radiologist.</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- TAB 2: PATIENT RECORDS & HISTORY -->
+        <section id="history-tab" class="tab-content">
+            <div class="card glass-panel full-width-panel">
+                <div class="table-header-controls">
+                    <div>
+                        <h2><i class="fa-solid fa-box-archive"></i> Patient Diagnostic Audit Records</h2>
+                        <p>Searchable history of past diagnostic screenings and LLM reports</p>
+                    </div>
+
+                    <div class="search-filters">
+                        <div class="search-input-wrapper">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="history-search" placeholder="Search by Patient ID, Name or Scan ID...">
+                        </div>
+
+                        <select id="history-filter-class" class="select-filter">
+                            <option value="All">All Diagnostic Classes</option>
+                            <option value="Normal">Normal</option>
+                            <option value="Pneumonia">Pneumonia</option>
+                            <option value="COVID-19">COVID-19</option>
+                        </select>
+
+                        <button id="btn-refresh-history" class="btn-icon-refresh" title="Refresh records">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table" id="history-table">
+                        <thead>
+                            <tr>
+                                <th>Scan ID</th>
+                                <th>Patient Info</th>
+                                <th>Modality</th>
+                                <th>Finding</th>
+                                <th>Confidence</th>
+                                <th>Risk</th>
+                                <th>Timestamp</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: PLATFORM ANALYTICS -->
+        <section id="analytics-tab" class="tab-content">
+            <div class="analytics-grid">
+                
+                <div class="card glass-panel stat-card">
+                    <div class="stat-icon"><i class="fa-solid fa-folder-plus"></i></div>
+                    <div class="stat-details">
+                        <span class="stat-title">Total Scans Analyzed</span>
+                        <h2 class="stat-number" id="stat-total-scans">0</h2>
+                    </div>
+                </div>
+
+                <div class="card glass-panel stat-card">
+                    <div class="stat-icon icon-success"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="stat-details">
+                        <span class="stat-title">Average Model Confidence</span>
+                        <h2 class="stat-number" id="stat-avg-conf">0.0%</h2>
+                    </div>
+                </div>
+
+                <div class="card glass-panel stat-card">
+                    <div class="stat-icon icon-danger"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="stat-details">
+                        <span class="stat-title">High Risk Cases Flags</span>
+                        <h2 class="stat-number" id="stat-high-risk">0</h2>
+                    </div>
+                </div>
+
+                <div class="card glass-panel analytics-chart-panel full-grid-width">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-chart-pie"></i> Diagnostic Class Distribution</h2>
+                    </div>
+                    <div class="analytics-bars-wrapper" id="analytics-class-bars">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <p>Advanced AI Medical Intelligence Platform &copy; 2026 | Technical Project Submission for SN Matrix Software Pvt. Ltd.</p>
+    </footer>
+
+    <!-- Custom JS -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

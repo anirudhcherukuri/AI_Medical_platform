@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  medical-ai-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: medical_ai_intelligence_platform
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      - ./storage:/app/storage
+    restart: unless-stopped
