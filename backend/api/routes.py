@@ -13,8 +13,9 @@ from backend.models.classifier import get_model_manager
 from backend.xai.gradcam import GradCAM
 from backend.llm.report_generator import get_report_generator
 from backend.utils.pdf_generator import generate_scan_pdf_report
-from backend.config import UPLOADS_DIR, HEATMAPS_DIR, REPORTS_DIR, BASE_DIR
-from backend.api.schemas import PredictionResponse, AnalyticsResponse, ScanHistoryResponse, HealthResponse
+from backend.utils.validation import validate_file, validate_image, validate_chest_xray
+from backend.config import UPLOADS_DIR, HEATMAPS_DIR, REPORTS_DIR, BASE_DIR, TRAINING_RESULTS_DIR, CLASS_NAMES_JSON_PATH, CLASS_NAMES
+from backend.api.schemas import PredictionResponse, AnalyticsResponse, ScanHistoryResponse, HealthResponse, ModelInfoResponse
 
 router = APIRouter(prefix="/api/v1", tags=["Medical Intelligence"])
 
@@ -30,6 +31,7 @@ async def predict_medical_image(
 ):
     """
     Main Diagnostic Endpoint:
+    0. Runs validation layer (extension, MIME, integrity, size, Chest X-Ray verification).
     1. Uploads and saves Chest X-Ray image.
     2. Runs PyTorch model inference for pathology prediction.
     3. Generates Explainable AI (Grad-CAM) heatmap & alpha overlay.
@@ -37,13 +39,25 @@ async def predict_medical_image(
     5. Saves full record to SQLite Database.
     6. Generates printable PDF report.
     """
+    # 0. Validation Layer (File, Image Integrity, Size, & Chest X-Ray Check)
+    validate_file(file)
+    file_bytes = await file.read()
+    pil_img = validate_image(file_bytes)
+
+    is_chest_xray, reason = validate_chest_xray(pil_img)
+    if not is_chest_xray:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Image is not a Chest X-Ray. {reason}"
+        )
+
     # 1. Save uploaded image
-    file_ext = os.path.splitext(file.filename)[1] or ".png"
+    file_ext = os.path.splitext(file.filename or "")[1] or ".png"
     unique_filename = f"scan_{uuid.uuid4().hex[:10]}{file_ext}"
     saved_image_path = UPLOADS_DIR / unique_filename
 
     with open(saved_image_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(file_bytes)
 
     # 2. DL Model Inference
     try:
@@ -248,13 +262,55 @@ def get_project_report():
         filename="Advanced_AI_Medical_Intelligence_Platform_Report.pdf"
     )
 
+@router.get("/model/info", response_model=ModelInfoResponse)
+def get_model_info():
+    import json
+
+    model_mgr = get_model_manager()
+    gradcam_dir = TRAINING_RESULTS_DIR / "gradcam_outputs"
+    gradcam_samples = []
+    if gradcam_dir.exists():
+        gradcam_samples = [
+            f"/storage/models/training_results/gradcam_outputs/{path.name}"
+            for path in sorted(gradcam_dir.glob("*.png"))
+        ]
+
+    def artifact_url(filename: str) -> Optional[str]:
+        path = TRAINING_RESULTS_DIR / filename
+        return f"/storage/models/training_results/{filename}" if path.exists() else None
+
+    dataset = "COVID-19 Radiography Database (Kaggle)"
+    if CLASS_NAMES_JSON_PATH.exists():
+        with open(CLASS_NAMES_JSON_PATH, "r", encoding="utf-8") as f:
+            class_data = json.load(f)
+            class_names = list(class_data.get("class_to_idx", {}).keys()) or CLASS_NAMES
+    else:
+        class_names = CLASS_NAMES
+
+    return {
+        "model_name": "best_model.pth",
+        "architecture": "DenseNet121 (Kaggle-trained)",
+        "model_loaded": model_mgr.weights_loaded,
+        "model_path": str(model_mgr.model_path),
+        "validation_accuracy": model_mgr.val_acc,
+        "training_epoch": model_mgr.epoch,
+        "class_names": class_names,
+        "dataset": dataset,
+        "training_curves_url": artifact_url("training_curves.png"),
+        "confusion_matrix_url": artifact_url("confusion_matrix.png"),
+        "roc_curve_url": artifact_url("roc_curve.png"),
+        "gradcam_samples": gradcam_samples,
+    }
+
 @router.get("/health", response_model=HealthResponse)
 def health_check():
     import datetime
+    model_mgr = get_model_manager()
     return {
-        "status": "healthy",
+        "status": "healthy" if model_mgr.weights_loaded else "degraded",
         "version": "1.0.0",
-        "model_loaded": True,
+        "model_loaded": model_mgr.weights_loaded,
+        "validation_accuracy": model_mgr.val_acc,
         "database_status": "connected",
         "timestamp": datetime.datetime.utcnow().isoformat()
     }

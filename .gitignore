@@ -5,3 +5,19 @@ __pycache__/
 *.db
 .vscode/
 .idea/
+
+# Large model weights (use Git LFS or download separately)
+*.pth
+*.pt
+*.h5
+*.pkl
+
+# Generated patient data (not for version control)
+storage/uploads/
+storage/heatmaps/
+storage/reports/
+
+# Keep directory structure but not contents
+!storage/uploads/.gitkeep
+!storage/heatmaps/.gitkeep
+!storage/reports/.gitkeep

@@ -337,10 +337,49 @@
                     </div>
                 </div>
 
+                <div class="card glass-panel analytics-chart-panel full-grid-width" id="model-training-panel">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-brain"></i> Kaggle Model Training Results</h2>
+                        <p class="section-subtitle" id="model-training-subtitle">Loading model metadata...</p>
+                    </div>
+                    <div class="model-training-stats" id="model-training-stats"></div>
+                    <div class="model-training-charts" id="model-training-charts"></div>
+                    <div class="model-gradcam-grid" id="model-gradcam-grid"></div>
+                </div>
+
             </div>
         </section>
 
-    </main>
+    <!-- Unsupported Image Glassmorphic Warning Modal -->
+    <div id="unsupported-image-modal" class="modal-overlay hidden">
+        <div class="modal-card glass-panel">
+            <button type="button" class="modal-close" id="btn-close-modal" title="Close"><i class="fa-solid fa-xmark"></i></button>
+            <div class="modal-header">
+                <div class="modal-icon-warning">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h2>Unsupported Image</h2>
+            </div>
+            <div class="modal-body">
+                <p class="modal-main-msg">This AI system only supports Chest X-Ray images.</p>
+                <p class="modal-sub-msg">Please upload a valid Thoracic Chest Radiograph.</p>
+                
+                <div class="modal-supported-box">
+                    <span>Supported formats:</span>
+                    <ul>
+                        <li><i class="fa-solid fa-check"></i> PNG</li>
+                        <li><i class="fa-solid fa-check"></i> JPG</li>
+                        <li><i class="fa-solid fa-check"></i> JPEG</li>
+                    </ul>
+                </div>
+                
+                <p class="modal-status-msg" id="modal-reason-text">Prediction has been cancelled.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-primary-action" id="btn-modal-dismiss">Acknowledge & Close</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="app-footer">

@@ -13,26 +13,29 @@ class MedicalChestXRayClassifier(nn.Module):
     """
     Deep Learning Model for Chest X-Ray Medical Image Classification.
     Uses DenseNet121 architecture optimized for thoracic pathology detection.
+    Classifier head matches the Kaggle COVID-19 Radiography training setup.
     """
     def __init__(self, num_classes: int = NUM_CLASSES, pretrained: bool = True):
         super(MedicalChestXRayClassifier, self).__init__()
-        # Load base DenseNet121
         weights = models.DenseNet121_Weights.DEFAULT if pretrained else None
         self.densenet = models.densenet121(weights=weights)
-        
-        # Replace classifier head for 3-class diagnosis: Normal, Pneumonia, COVID-19
+
         in_features = self.densenet.classifier.in_features
         self.densenet.classifier = nn.Sequential(
-            nn.Dropout(0.2),
-            nn.Linear(in_features, 256),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(256, num_classes)
+            nn.BatchNorm1d(in_features),
+            nn.Dropout(0.5),
+            nn.Linear(in_features, 512),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm1d(512),
+            nn.Dropout(0.5),
+            nn.Linear(512, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(256, num_classes),
         )
-        
-        # Target layer for Grad-CAM visualization
+
         self.target_layer = self.densenet.features.denseblock4.denselayer16
-        
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.densenet(x)
 
@@ -64,13 +67,26 @@ class MedicalModelManager:
         self.transforms = get_transforms()
         self.class_names = CLASS_NAMES
         self.model_path = model_path
+        self.weights_loaded = False
+        self.val_acc = None
+        self.epoch = None
         
         # Load model weights if present
         if os.path.exists(self.model_path):
             try:
-                state_dict = torch.load(self.model_path, map_location=self.device)
-                self.model.load_state_dict(state_dict)
-                print(f"[ModelManager] Loaded model weights from {self.model_path}")
+                checkpoint = torch.load(self.model_path, map_location=self.device, weights_only=False)
+                state_dict = checkpoint.get("model_state_dict", checkpoint)
+                if any(key.startswith("features.") for key in state_dict):
+                    self.model.densenet.load_state_dict(state_dict)
+                else:
+                    self.model.load_state_dict(state_dict)
+                self.weights_loaded = True
+                if isinstance(checkpoint, dict):
+                    self.val_acc = checkpoint.get("val_acc")
+                    self.epoch = checkpoint.get("epoch")
+                val_acc = self.val_acc
+                acc_msg = f" (val acc: {val_acc * 100:.1f}%)" if val_acc is not None else ""
+                print(f"[ModelManager] Loaded model weights from {self.model_path}{acc_msg}")
             except Exception as e:
                 print(f"[ModelManager] Warning loading state dict ({e}). Initializing default weights.")
         else:

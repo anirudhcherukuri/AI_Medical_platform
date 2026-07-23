@@ -36,5 +36,20 @@ class HealthResponse(BaseModel):
     status: str
     version: str
     model_loaded: bool
+    validation_accuracy: Optional[float] = None
     database_status: str
     timestamp: str
+
+class ModelInfoResponse(BaseModel):
+    model_name: str
+    architecture: str
+    model_loaded: bool
+    model_path: str
+    validation_accuracy: Optional[float] = None
+    training_epoch: Optional[int] = None
+    class_names: List[str]
+    dataset: str
+    training_curves_url: Optional[str] = None
+    confusion_matrix_url: Optional[str] = None
+    roc_curve_url: Optional[str] = None
+    gradcam_samples: List[str] = Field(default_factory=list)

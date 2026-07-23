@@ -88,7 +88,7 @@ class MedicalDatasetTrainer:
 
         # Save trained model weights
         os.makedirs(os.path.dirname(MODEL_SAVE_PATH), exist_ok=True)
-        torch.save(self.model.state_dict(), MODEL_SAVE_PATH)
+        torch.save(self.model.densenet.state_dict(), MODEL_SAVE_PATH)
         print(f"[Trainer] Model checkpoint successfully saved to {MODEL_SAVE_PATH}")
 
 if __name__ == "__main__":

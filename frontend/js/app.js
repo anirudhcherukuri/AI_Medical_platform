@@ -129,12 +129,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // -------------------------------------------------------------------------
+    // GLASSMORPHISM WARNING MODAL LOGIC
+    // -------------------------------------------------------------------------
+    const warningModal = document.getElementById('unsupported-image-modal');
+    const btnCloseModal = document.getElementById('btn-close-modal');
+    const btnModalDismiss = document.getElementById('btn-modal-dismiss');
+    const modalReasonText = document.getElementById('modal-reason-text');
+
+    function showUnsupportedModal(reasonDetail) {
+        if (modalReasonText) {
+            modalReasonText.textContent = reasonDetail ? `Reason: ${reasonDetail}` : "Prediction has been cancelled.";
+        }
+        if (warningModal) {
+            warningModal.classList.remove('hidden');
+        }
+    }
+
+    function hideUnsupportedModal() {
+        if (warningModal) {
+            warningModal.classList.add('hidden');
+        }
+    }
+
+    if (btnCloseModal) btnCloseModal.addEventListener('click', hideUnsupportedModal);
+    if (btnModalDismiss) btnModalDismiss.addEventListener('click', hideUnsupportedModal);
+    if (warningModal) {
+        warningModal.addEventListener('click', (e) => {
+            if (e.target === warningModal) hideUnsupportedModal();
+        });
+    }
+
     // Form Submission & API Trigger
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         if (!selectedFile) {
-            alert("Please select or drop a Chest X-Ray image first.");
+            showUnsupportedModal("Please select or drop a Chest X-Ray image first.");
             return;
         }
 
@@ -163,14 +194,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!res.ok) {
                 const errData = await res.json();
-                throw new Error(errData.detail || "Diagnostic analysis failed");
+                const detailMsg = errData.detail || "Diagnostic analysis failed";
+                showUnsupportedModal(detailMsg);
+                loader.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
             }
 
             const data = await res.json();
             renderDiagnosticResults(data);
 
         } catch (err) {
-            alert(`Error running diagnostic pipeline: ${err.message}`);
+            showUnsupportedModal(err.message || "Prediction has been cancelled.");
             loader.classList.add('hidden');
             emptyState.classList.remove('hidden');
         }
@@ -305,8 +340,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // -------------------------------------------------------------------------
     async function loadAnalyticsData() {
         try {
-            const res = await fetch('/api/v1/analytics');
-            const data = await res.json();
+            const [analyticsRes, modelRes] = await Promise.all([
+                fetch('/api/v1/analytics'),
+                fetch('/api/v1/model/info')
+            ]);
+            const data = await analyticsRes.json();
+            const modelInfo = await modelRes.json();
 
             document.getElementById('stat-total-scans').textContent = data.total_scans;
             document.getElementById('stat-avg-conf').textContent = `${(data.average_confidence * 100).toFixed(1)}%`;
@@ -335,9 +374,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 barsContainer.appendChild(item);
             }
 
+            renderModelTrainingPanel(modelInfo);
+
         } catch (err) {
             console.error("Failed to load analytics:", err);
         }
+    }
+
+    function renderModelTrainingPanel(modelInfo) {
+        const subtitle = document.getElementById('model-training-subtitle');
+        const stats = document.getElementById('model-training-stats');
+        const charts = document.getElementById('model-training-charts');
+        const gradcamGrid = document.getElementById('model-gradcam-grid');
+
+        const valAcc = modelInfo.validation_accuracy != null
+            ? `${(modelInfo.validation_accuracy * 100).toFixed(1)}%`
+            : 'N/A';
+        const epoch = modelInfo.training_epoch != null ? modelInfo.training_epoch : 'N/A';
+        const classes = (modelInfo.class_names || []).join(', ');
+
+        subtitle.textContent = `${modelInfo.architecture} | ${modelInfo.dataset}`;
+
+        stats.innerHTML = `
+            <div class="model-stat-pill"><span>Validation Accuracy</span><strong>${valAcc}</strong></div>
+            <div class="model-stat-pill"><span>Best Epoch</span><strong>${epoch}</strong></div>
+            <div class="model-stat-pill"><span>Model Status</span><strong>${modelInfo.model_loaded ? 'Loaded' : 'Not Loaded'}</strong></div>
+            <div class="model-stat-pill"><span>Classes</span><strong>${classes}</strong></div>
+        `;
+
+        const chartItems = [
+            { title: 'Training Curves', url: modelInfo.training_curves_url },
+            { title: 'Confusion Matrix', url: modelInfo.confusion_matrix_url },
+            { title: 'ROC Curve', url: modelInfo.roc_curve_url }
+        ].filter(item => item.url);
+
+        charts.innerHTML = chartItems.map(item => `
+            <div class="training-chart-card">
+                <h3>${item.title}</h3>
+                <img src="${item.url}" alt="${item.title}">
+            </div>
+        `).join('');
+
+        gradcamGrid.innerHTML = (modelInfo.gradcam_samples || []).map(url => {
+            const label = decodeURIComponent(url.split('/').pop().replace('.png', '').replace(/_/g, ' '));
+            return `
+                <div class="gradcam-sample-card">
+                    <img src="${url}" alt="${label}">
+                    <span>${label}</span>
+                </div>
+            `;
+        }).join('');
     }
 
     // Helper Utility

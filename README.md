@@ -6,8 +6,8 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Technical Evaluation Project Assignment** for the position of **AI/ML Engineer** at **SN Matrix Software Pvt. Ltd.**  
-> **Candidate:** Vamshi Cherukuri (<vamshicheukuri@gmail.com>)
+> **Repository:** [https://github.com/anirudhcherukuri/AI_Medical_platform](https://github.com/anirudhcherukuri/AI_Medical_platform)  
+> **Technical Evaluation Project Assignment** for the position of **AI/ML Engineer** at **SN Matrix Software Pvt. Ltd.**
 
 ---
 
@@ -15,13 +15,18 @@
 
 The **Advanced AI Medical Intelligence Platform** is a production-grade, end-to-end medical AI application designed to assist radiologists and healthcare professionals in screening Chest Radiographs (X-Rays). 
 
-It combines **Deep Learning** (PyTorch DenseNet121), **Explainable AI** (Grad-CAM & Grad-CAM++ feature localization), **Large Language Models** (Google Gemini 1.5 Flash API with offline clinical logic fallback), **FastAPI REST APIs**, **SQLAlchemy Database tracking**, **ReportLab PDF Generation**, and an interactive glassmorphic **Web Application Studio**.
+It combines **Pre-Inference Anatomical Validation** (restricting uploads strictly to valid Thoracic Chest X-Rays), **Deep Learning** (PyTorch DenseNet121), **Explainable AI** (Grad-CAM feature localization), **Large Language Models** (Google Gemini 1.5 Flash API with offline clinical logic fallback), **FastAPI REST APIs**, **SQLAlchemy Database tracking**, **ReportLab PDF Generation**, and an interactive glassmorphic **Web Application Studio**.
 
 ---
 
 ## 🚀 Key Features & Capabilities
 
-1. **Deep Learning Medical Imaging Classifier (`PyTorch`)**:
+1. **Pre-Inference Validation & Anatomical Verification**:
+   - Validates file extensions (`.png`, `.jpg`, `.jpeg`), MIME types (`image/png`, `image/jpeg`), file size (<15MB), and image integrity (`Image.verify()`).
+   - Computer vision anatomical verification engine evaluating color variance, background ratio, circular CT FOV, and bilateral thoracic lung cavity structures.
+   - Immediately halts pipeline and presents a glassmorphic warning modal on non-chest images (Abdominal X-Rays, Hand X-Rays, CT Scans, Random Photos, PDFs, or Corrupted Files).
+
+2. **Deep Learning Medical Imaging Classifier (`PyTorch`)**:
    - DenseNet121 architecture fine-tuned for multi-class thoracic pathology detection (`Normal`, `Pneumonia`, `COVID-19`).
    - Automated training pipeline (`train_and_setup.py`) calibrating weights with synthetic X-Ray data.
 

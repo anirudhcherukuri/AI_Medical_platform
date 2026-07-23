@@ -5,6 +5,7 @@ import cv2
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torchvision import transforms
 from PIL import Image, ImageDraw, ImageFilter
 from pathlib import Path
 import datetime
@@ -94,44 +95,97 @@ def train_and_initialize_system():
         img.save(sample_path)
         print(f"  -> Saved {sample_path}")
 
-    # 2. Train/Fine-Tune PyTorch Model Weights
-    print("\n[Step 2/5] Training PyTorch DenseNet121 Diagnostic Classifier...")
+    # 2. Train/Fine-Tune PyTorch Model Weights with High Accuracy (Mini-Batch DataLoader)
+    print("\n[Step 2/5] Training PyTorch DenseNet121 Diagnostic Classifier (15 High-Accuracy Epochs)...")
+    import tempfile, shutil
+    from torch.utils.data import TensorDataset, DataLoader, random_split
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"  -> Training device: {device}")
     model = MedicalChestXRayClassifier(num_classes=3, pretrained=True)
     model.to(device)
-    model.train()
-    
-    transform = get_transforms()
-    
-    # Build synthetic training batch
-    inputs, labels = [], []
+
+    # Augmented transform for training variety
+    augment_transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(10),
+        transforms.ColorJitter(brightness=0.15, contrast=0.15),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    eval_transform = get_transforms()
+
+    # Save 150 synthetic images to a temp folder (50 per class)
+    print("  -> Generating 150 augmented synthetic radiograph samples...")
     class_map = {"Normal": 0, "Pneumonia": 1, "COVID-19": 2}
-    
+    all_tensors, all_labels = [], []
     for c_name, c_idx in class_map.items():
-        # Create 10 variations per class for light calibration training
-        for _ in range(10):
-            cond = c_name if c_name != "COVID-19" else "COVID-19"
-            img = create_synthetic_chest_xray(cond)
-            inputs.append(transform(img))
-            labels.append(c_idx)
-            
-    inputs_tensor = torch.stack(inputs).to(device)
-    labels_tensor = torch.tensor(labels, dtype=torch.long).to(device)
-    
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
+        for i in range(50):
+            img = create_synthetic_chest_xray(c_name)
+            t = augment_transform(img) if i % 5 != 0 else eval_transform(img)
+            all_tensors.append(t)
+            all_labels.append(c_idx)
+
+    dataset = TensorDataset(torch.stack(all_tensors), torch.tensor(all_labels, dtype=torch.long))
+    train_size = int(0.8 * len(dataset))
+    val_size = len(dataset) - train_size
+    train_ds, val_ds = random_split(dataset, [train_size, val_size])
+
+    train_loader = DataLoader(train_ds, batch_size=8, shuffle=True)
+    val_loader   = DataLoader(val_ds,   batch_size=8, shuffle=False)
+
+    optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
     criterion = nn.CrossEntropyLoss()
-    
-    print("  -> Training for 3 calibration epochs...")
-    for epoch in range(3):
-        optimizer.zero_grad()
-        outputs = model(inputs_tensor)
-        loss = criterion(outputs, labels_tensor)
-        loss.backward()
-        optimizer.step()
-        print(f"     Epoch {epoch+1}/3 | Cross-Entropy Loss: {loss.item():.4f}")
-        
-    torch.save(model.state_dict(), MODEL_SAVE_PATH)
-    print(f"  -> Saved fine-tuned model weights to {MODEL_SAVE_PATH}")
+    best_val_acc = 0.0
+
+    print("  -> Executing 15 high-precision mini-batch epochs...\n")
+    for epoch in range(15):
+        # --- TRAIN ---
+        model.train()
+        train_loss, train_correct, train_total = 0.0, 0, 0
+        for xb, yb in train_loader:
+            xb, yb = xb.to(device), yb.to(device)
+            optimizer.zero_grad()
+            out = model(xb)
+            loss = criterion(out, yb)
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item() * xb.size(0)
+            _, preds = out.max(1)
+            train_correct += preds.eq(yb).sum().item()
+            train_total += yb.size(0)
+        scheduler.step()
+
+        # --- VALIDATE ---
+        model.eval()
+        val_loss, val_correct, val_total = 0.0, 0, 0
+        with torch.no_grad():
+            for xb, yb in val_loader:
+                xb, yb = xb.to(device), yb.to(device)
+                out = model(xb)
+                val_loss += criterion(out, yb).item() * xb.size(0)
+                _, preds = out.max(1)
+                val_correct += preds.eq(yb).sum().item()
+                val_total += yb.size(0)
+
+        ep_train_loss = train_loss / train_total
+        ep_train_acc  = (train_correct / train_total) * 100.0
+        ep_val_loss   = val_loss / val_total
+        ep_val_acc    = (val_correct / val_total) * 100.0
+
+        marker = " *** BEST ***" if ep_val_acc >= best_val_acc else ""
+        print(f"     Epoch [{epoch+1:02d}/15] | "
+              f"Train Loss: {ep_train_loss:.4f} | Train Acc: {ep_train_acc:.1f}% | "
+              f"Val Loss: {ep_val_loss:.4f} | Val Acc: {ep_val_acc:.1f}%{marker}")
+
+        if ep_val_acc >= best_val_acc:
+            best_val_acc = ep_val_acc
+            torch.save(model.state_dict(), MODEL_SAVE_PATH)
+
+    print(f"\n  -> Training Complete! Best Validation Accuracy: {best_val_acc:.1f}%")
+    print(f"  -> Best model checkpoint saved to: {MODEL_SAVE_PATH}")
 
     # 3. Database Initialization & Seeding
     print("\n[Step 3/5] Initializing Database & Audit Log Records...")
