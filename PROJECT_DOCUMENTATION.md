@@ -249,11 +249,3 @@ Run automated unit tests using `pytest`:
 python -m pytest tests/ -v
 ```
 
-### Verification Matrix:
-- `Chest X-Ray` $\rightarrow$ **ACCEPTED** (DenseNet & Grad-CAM pipeline executed)
-- `Abdominal X-Ray` $\rightarrow$ **REJECTED** (HTTP 400 - Glassmorphic Warning Modal)
-- `Hand X-Ray` $\rightarrow$ **REJECTED** (HTTP 400 - Glassmorphic Warning Modal)
-- `CT Scan` $\rightarrow$ **REJECTED** (HTTP 400 - Glassmorphic Warning Modal)
-- `Random Photo` $\rightarrow$ **REJECTED** (HTTP 400 - Glassmorphic Warning Modal)
-- `PDF File` $\rightarrow$ **REJECTED** (HTTP 400 - Glassmorphic Warning Modal)
-- `Corrupted File` $\rightarrow$ **REJECTED** (HTTP 400 - Glassmorphic Warning Modal)
