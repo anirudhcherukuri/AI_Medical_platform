@@ -76,137 +76,87 @@ def validate_image(file_bytes: bytes) -> Image.Image:
 
 def validate_chest_xray(pil_image: Image.Image) -> Tuple[bool, str]:
     """
-    Enhanced Chest X-Ray Validator
-    Rejects:
-    - Color photos
-    - Documents
-    - CT scans
-    - Hand/Foot X-rays
-    - Abdomen/Pelvis X-rays
+    Validates whether the input image is a Thoracic Chest Radiograph (Chest X-Ray).
+    Checks color variance, background ratio, structural density, and bilateral thoracic lung cavity structures.
+    Returns (is_valid, reason).
     """
-
     arr = np.array(pil_image)
-
     if arr.ndim != 3 or arr.shape[2] != 3:
-        return False, "Invalid image format."
+        return False, "Image channel format is invalid."
 
-    h, w, _ = arr.shape
+    height, width, _ = arr.shape
+    if height < 64 or width < 64:
+        return False, "Image dimensions are too small for medical diagnostic analysis."
 
-    if h < 128 or w < 128:
-        return False, "Image resolution is too small."
+    # 1. Color Variance Check (Reject non-grayscale standard photos)
+    r = arr[:, :, 0].astype(np.float32)
+    g = arr[:, :, 1].astype(np.float32)
+    b = arr[:, :, 2].astype(np.float32)
 
-    # -----------------------------
-    # Convert to grayscale
-    # -----------------------------
+    diff_rg = np.mean(np.abs(r - g))
+    diff_gb = np.mean(np.abs(g - b))
+    color_variance = diff_rg + diff_gb
+
+    if color_variance > 30.0:
+        return False, "Uploaded image is a color photo, not a medical radiograph."
+
+    # 2. Structural Geometry & Background Void Check
     gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
-    gray = cv2.resize(gray, (256, 256))
+    resized_gray = cv2.resize(gray, (256, 256))
 
-    # -----------------------------
-    # Reject color photographs
-    # -----------------------------
-    color_std = np.std(arr[:, :, 0] - arr[:, :, 1]) + np.std(arr[:, :, 1] - arr[:, :, 2])
+    # Background black pixel ratio (< 25 intensity)
+    black_pixels = np.sum(resized_gray < 25)
+    total_pixels = resized_gray.size
+    black_ratio = black_pixels / total_pixels
 
-    if color_std > 8:
-        return False, "Uploaded image appears to be a normal color photograph."
+    # Hand/Foot/Extremity X-Rays usually have 70%+ black background void surrounding thin bones
+    if black_ratio > 0.70:
+        return False, "Uploaded image is an extremity or hand X-Ray, not a Chest X-Ray."
 
-    # -----------------------------
-    # Reject white documents
-    # -----------------------------
-    white_ratio = np.mean(gray > 235)
+    # Extremely bright / white documents / line drawings
+    white_pixels = np.sum(resized_gray > 230)
+    if (white_pixels / total_pixels) > 0.60:
+        return False, "Uploaded image is a document or diagram, not a Chest X-Ray."
 
-    if white_ratio > 0.55:
-        return False, "Uploaded image appears to be a document."
+    # 3. Axial CT Scan FOV Check
+    # Axial head/brain CT scans have circular boundary with near-black outer corners
+    top_left_corner = np.mean(resized_gray[:35, :35])
+    top_right_corner = np.mean(resized_gray[:35, 221:])
+    bottom_left_corner = np.mean(resized_gray[221:, :35])
+    bottom_right_corner = np.mean(resized_gray[221:, 221:])
+    avg_corner_intensity = (top_left_corner + top_right_corner + bottom_left_corner + bottom_right_corner) / 4.0
 
-    # -----------------------------
-    # Reject extremely dark images
-    # -----------------------------
-    black_ratio = np.mean(gray < 20)
-
-    if black_ratio > 0.75:
-        return False, "Uploaded image is not a diagnostic Chest X-Ray."
-
-    # -----------------------------
-    # Reject CT scans
-    # -----------------------------
-    corner = np.mean([
-        gray[:35, :35],
-        gray[:35, -35:],
-        gray[-35:, :35],
-        gray[-35:, -35:]
-    ])
-
-    center = np.mean(gray[80:176, 80:176])
-
-    if corner < 15 and center > 70:
-        return False, "CT scan detected."
-
-    # -----------------------------
-    # Lung regions
-    # -----------------------------
-    left = gray[45:170, 30:110]
-    center_region = gray[45:170, 105:150]
-    right = gray[45:170, 146:226]
-
-    left_mean = np.mean(left)
-    right_mean = np.mean(right)
-    center_mean = np.mean(center_region)
-
-    left_std = np.std(left)
-    right_std = np.std(right)
-
-    # lungs should exist
-    if left_std < 18 or right_std < 18:
-        return False, "Thoracic lung fields not detected."
-
-    # mediastinum should be brighter
-    if center_mean < ((left_mean + right_mean) / 2):
-        return False, "Thoracic anatomy not detected."
-
-    # -----------------------------
-    # Abdomen detection
-    # -----------------------------
-    upper = gray[:120, :]
-    lower = gray[150:, :]
-
-    edges_upper = cv2.Canny(upper, 50, 120)
-    edges_lower = cv2.Canny(lower, 50, 120)
-
-    upper_density = np.mean(edges_upper > 0)
-    lower_density = np.mean(edges_lower > 0)
-
-    if lower_density > upper_density * 1.35:
-        return False, "Image appears to be an abdominal or pelvic radiograph."
-
-    # -----------------------------
-    # Spine continuity
-    # -----------------------------
-    spine = gray[:, 115:140]
-
-    if np.std(spine) < 10:
-        return False, "Chest anatomy not detected."
-
-    # -----------------------------
-    # Final confidence score
-    # -----------------------------
-    score = 0
-
-    if color_std < 5:
-        score += 1
-
-    if left_std > 20:
-        score += 1
-
-    if right_std > 20:
-        score += 1
-
-    if center_mean > left_mean:
-        score += 1
-
-    if upper_density > lower_density:
-        score += 1
-
-    if score < 4:
-        return False, "Uploaded image is not a valid Chest X-Ray."
-
-    return True, "Valid Chest X-Ray"
+    center_region = np.mean(resized_gray[80:176, 80:176])
     
+    # CT scans usually have black corners (<15) and uniform circular head center with skull ring
+    if avg_corner_intensity < 12.0 and center_region > 65.0:
+        ring_sample_1 = np.mean(resized_gray[40:60, 40:216])
+        ring_sample_2 = np.mean(resized_gray[196:216, 40:216])
+        if abs(ring_sample_1 - ring_sample_2) < 15.0 and black_ratio > 0.40:
+            return False, "Uploaded image is an Axial CT Scan, not a Chest X-Ray."
+
+    # 4. Bilateral Thoracic Pulmonary Lung Cavity Verification
+    h_256, w_256 = 256, 256
+    left_lung_zone = resized_gray[int(0.20 * h_256):int(0.65 * h_256), int(0.12 * w_256):int(0.42 * w_256)]
+    right_lung_zone = resized_gray[int(0.20 * h_256):int(0.65 * h_256), int(0.58 * w_256):int(0.88 * w_256)]
+    mediastinum_zone = resized_gray[int(0.20 * h_256):int(0.65 * h_256), int(0.40 * w_256):int(0.60 * w_256)]
+
+    left_lung_mean = float(np.mean(left_lung_zone))
+    right_lung_mean = float(np.mean(right_lung_zone))
+    mediastinum_mean = float(np.mean(mediastinum_zone))
+
+    avg_lung_intensity = (left_lung_mean + right_lung_mean) / 2.0
+
+    # In Chest X-Rays:
+    # a) Lung fields contain dark air cavities
+    # b) Central mediastinum (heart/spine) is brighter than bilateral lung fields
+    if avg_lung_intensity > 155.0:
+        return False, "Uploaded image is an Abdominal X-Ray or non-chest radiograph."
+
+    if mediastinum_mean < (avg_lung_intensity - 10.0):
+        return False, "Image lacks central mediastinum / thoracic cavity structure."
+
+    if left_lung_mean > 165.0 or right_lung_mean > 165.0:
+        return False, "Image does not display bilateral thoracic lung fields."
+
+    return True, "Valid Thoracic Chest Radiograph."
