@@ -209,7 +209,4 @@ def validate_chest_xray(pil_image: Image.Image) -> Tuple[bool, str]:
         return False, "Uploaded image is not a valid Chest X-Ray."
 
     return True, "Valid Chest X-Ray"
-    if left_lung_mean > 165.0 or right_lung_mean > 165.0:
-        return False, "Image does not display bilateral thoracic lung fields."
-
-    return True, "Valid Thoracic Chest Radiograph."
+    
