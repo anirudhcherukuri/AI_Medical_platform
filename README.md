@@ -26,9 +26,11 @@ It combines **Pre-Inference Anatomical Validation** (restricting uploads strictl
    - Computer vision anatomical verification engine evaluating color variance, background ratio, circular CT FOV, and bilateral thoracic lung cavity structures.
    - Immediately halts pipeline and presents a glassmorphic warning modal on non-chest images (Abdominal X-Rays, Hand X-Rays, CT Scans, Random Photos, PDFs, or Corrupted Files).
 
-2. **Deep Learning Medical Imaging Classifier (`PyTorch`)**:
-   - DenseNet121 architecture fine-tuned for multi-class thoracic pathology detection (`Normal`, `Pneumonia`, `COVID-19`).
-   - Automated training pipeline (`train_and_setup.py`) calibrating weights with synthetic X-Ray data.
+2. **Deep Learning Medical Imaging Classifier (PyTorch)
+
+   - Designed, trained, and optimized a DenseNet121 convolutional neural network from scratch using the COVID-19 Radiography Dataset (Kaggle) for multi-class           thoracic pathology classification (Normal, Pneumonia, COVID-19).
+   - Implemented data preprocessing, augmentation, training, validation, and model checkpointing in the Kaggle GPU environment to produce the final deployment          model (best_model.pth).
+   - Integrated the trained model into the FastAPI backend for real-time medical image analysis.
 
 2. **Explainable AI (Grad-CAM / Grad-CAM++)**:
    - Gradient-weighted Class Activation Mapping hooked to final dense convolutional blocks (`denseblock4`).
@@ -205,4 +207,4 @@ d:/AI_Medical_Platform/
 ## 📄 License & Contact
 
 Developed by **Vamshi Cherukuri** for technical evaluation at **SN Matrix Software Pvt. Ltd.**  
-Email: [vamshicheukuri@gmail.com](mailto:vamshicheukuri@gmail.com)
+Email: [Anirudh cheukuri@gmail.com](mailto:vamshicheukuri@gmail.com)
