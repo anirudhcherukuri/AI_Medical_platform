@@ -1,5 +1,8 @@
+import os
 import uvicorn
-from backend.config import HOST, PORT
+
+HOST = "0.0.0.0"
+PORT = int(os.environ.get("PORT", 8000))
 
 if __name__ == "__main__":
     print("=========================================================")
@@ -9,4 +12,10 @@ if __name__ == "__main__":
     print(f" Swagger Docs: http://localhost:{PORT}/docs")
     print(f" Health Check: http://localhost:{PORT}/api/v1/health")
     print("=========================================================")
-    uvicorn.run("backend.main:app", host=HOST, port=PORT, reload=True)
+
+    uvicorn.run(
+        "backend.main:app",
+        host=HOST,
+        port=PORT,
+        reload=False
+    )
