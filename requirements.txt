@@ -1,6 +1,6 @@
 fastapi==0.139.2
 uvicorn[standard]==0.35.0
-
+python-dotenv
 torch==2.7.1
 torchvision==0.22.1
 
