@@ -97,6 +97,25 @@ It combines **Pre-Inference Anatomical Validation** (restricting uploads strictl
 - **Containerization**: Docker, Docker-Compose
 
 ---
+## Environment Variables
+
+This project uses the Google Gemini API to generate AI-assisted radiology reports.
+
+### Setup
+
+1. Create a `.env` file in the project root.
+2. Add your Gemini API key:
+
+```env
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+```
+
+A sample configuration is provided in `.env.example`.
+
+You can generate a Gemini API key from Google AI Studio:
+https://aistudio.google.com/app/apikey
+
+If no Gemini API key is configured, the application automatically uses the built-in Clinical Logic Engine (Fallback Mode), allowing the application to continue functioning.
 
 ## 🛠️ Quickstart Setup & Installation
 
